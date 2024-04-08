@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from .queries import get_user_by_name_async_edgeql as get_user_by_name_qry
 from .queries import get_users_async_edgeql as get_users_qry
-
+from .queries import create_user_async_edgeql as create_user_qry
 
 router = APIRouter()
 client = edgedb.create_async_client()
@@ -35,3 +35,16 @@ async def get_users(
             )
 
         return user
+
+
+@router.post("/users", status_code=201)
+async def create_user(user: RequestData) -> create_user_qry.CreateUserResult:
+
+    try:
+        created_user = await create_user_qry.create_user(client, name=user.name)
+    except edgedb.errors.ConstraintViolationError:
+        raise HTTPException(
+            status_code=400, detail={"error": f"Username '{user.name}' already exist."},
+        )
+
+    return created_user
